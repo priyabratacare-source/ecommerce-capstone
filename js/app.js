@@ -1,143 +1,130 @@
+```javascript
 import {
     getProducts,
     getProduct
 } from "./api.js";
 
 import {
-    renderProducts,
+    renderProductCard,
     renderProductDetails,
     renderCart
 } from "./components.js";
 
 import {
-    getRoute,
-    startRouter
+    getRoute
 } from "./router.js";
 
+import {
+    renderAdminLogin,
+    setupAdminLogin
+} from "./admin.js";
 
-const app =
-    document.getElementById("app");
 
-const searchInput =
-    document.getElementById("searchInput");
-
-const searchButton =
-    document.getElementById("searchButton");
-
-const cartCount =
-    document.getElementById("cartCount");
-
+const app = document.getElementById("app");
 
 let products = [];
 
-let cart =
-    JSON.parse(
-        localStorage.getItem("shopease-cart")
-    ) || [];
+let cart = JSON.parse(
+    localStorage.getItem("shopease_cart") || "[]"
+);
 
+
+/* =========================
+   CART
+========================= */
 
 function saveCart() {
     localStorage.setItem(
-        "shopease-cart",
+        "shopease_cart",
         JSON.stringify(cart)
     );
-
-    updateCartCount();
 }
 
 
 function updateCartCount() {
+    const count = cart.reduce(
+        (total, item) =>
+            total + (Number(item.quantity) || 0),
+        0
+    );
+
+    const cartCount =
+        document.getElementById("cartCount");
+
     if (cartCount) {
-        cartCount.textContent =
-            cart.length;
+        cartCount.textContent = count;
     }
 }
 
 
-function showLoading() {
-    app.innerHTML = `
-        <div class="loading-state">
-            <div class="loader"></div>
-            <p>Loading...</p>
-        </div>
-    `;
-}
+function addToCart(product) {
+    const productId =
+        product._id || product.id;
 
+    const existing = cart.find(
+        item => item.id === productId
+    );
 
-function showError(message) {
-    app.innerHTML = `
-        <div class="error-state">
-            <h2>Something went wrong</h2>
-            <p>${message}</p>
-
-            <button
-                class="primary-button"
-                id="retryButton"
-            >
-                Try Again
-            </button>
-        </div>
-    `;
-
-    const retryButton =
-        document.getElementById(
-            "retryButton"
-        );
-
-    if (retryButton) {
-        retryButton.addEventListener(
-            "click",
-            () => {
-                renderPage();
-            }
-        );
+    if (existing) {
+        existing.quantity += 1;
+    } else {
+        cart.push({
+            id: productId,
+            title: product.title,
+            description: product.description,
+            price: product.price,
+            category: product.category,
+            thumbnail: product.thumbnail,
+            quantity: 1
+        });
     }
+
+    saveCart();
+
+    updateCartCount();
+
+    alert("Product added to cart!");
 }
 
 
-async function loadProducts() {
-    showLoading();
+function removeFromCart(id) {
+    cart = cart.filter(
+        item => item.id !== id
+    );
 
-    try {
-        products =
-            await getProducts();
+    saveCart();
 
-        renderPage();
-    } catch (error) {
-        console.error(error);
-
-        showError(
-            "Unable to connect to the ShopEase server."
-        );
-    }
+    renderCurrentPage();
 }
 
 
-async function renderProductPage(id) {
-    showLoading();
+function updateQuantity(id, quantity) {
+    const item = cart.find(
+        product => product.id === id
+    );
 
-    try {
-        const product =
-            await getProduct(id);
+    if (!item) return;
 
-        app.innerHTML =
-            renderProductDetails(product);
+    item.quantity = Math.max(
+        1,
+        Number(quantity) || 1
+    );
 
-        attachProductEvents();
+    saveCart();
 
-    } catch (error) {
-        console.error(error);
-
-        showError(
-            "Unable to load this product."
-        );
-    }
+    renderCurrentPage();
 }
 
 
-function renderHomePage() {
+/* =========================
+   HOME
+========================= */
+
+function renderHome() {
+
     app.innerHTML = `
         <section class="hero">
+
             <div class="hero-content">
 
                 <span class="hero-badge">
@@ -145,13 +132,13 @@ function renderHomePage() {
                 </span>
 
                 <h1>
-                    Discover Products
-                    You'll Love
+                    Everything You Need,
+                    <span>All in One Place.</span>
                 </h1>
 
                 <p>
-                    Explore our collection of
-                    quality products at great prices.
+                    Discover quality products at
+                    great prices with ShopEase.
                 </p>
 
                 <a
@@ -162,49 +149,90 @@ function renderHomePage() {
                 </a>
 
             </div>
+
         </section>
+
 
         <section class="home-section">
+
             <div class="section-heading">
-                <span>Featured</span>
-                <h2>Latest Products</h2>
+
+                <span>
+                    ShopEase Collection
+                </span>
+
+                <h2>
+                    Featured Products
+                </h2>
+
             </div>
 
-            ${
-                products.length
-                    ? renderProducts(
-                        products.slice(0, 6)
-                    )
-                    : `
-                        <div class="empty-state">
-                            <p>
-                                No products available yet.
-                            </p>
-                        </div>
-                    `
-            }
+
+            <div class="products-grid">
+
+                ${
+                    products.length > 0
+                        ? products
+                            .slice(0, 8)
+                            .map(product =>
+                                renderProductCard(product)
+                            )
+                            .join("")
+                        : `
+                            <div class="empty-state">
+                                <h2>
+                                    No Products Available
+                                </h2>
+
+                                <p>
+                                    Products will appear
+                                    here when available.
+                                </p>
+                            </div>
+                        `
+                }
+
+            </div>
+
         </section>
     `;
+
+    attachProductEvents();
 }
 
 
-function renderProductsPage() {
-    app.innerHTML = `
-        <section class="page-header">
-            <span>ShopEase Store</span>
-            <h1>All Products</h1>
-            <p>
-                Browse our complete product collection.
-            </p>
-        </section>
+/* =========================
+   PRODUCTS
+========================= */
 
+function renderProducts() {
+
+    app.innerHTML = `
         <section class="products-section">
+
+            <div class="page-header">
+
+                <span>
+                    ShopEase Store
+                </span>
+
+                <h1>
+                    All Products
+                </h1>
+
+                <p>
+                    Browse our complete
+                    product collection.
+                </p>
+
+            </div>
+
 
             <div class="filter-bar">
 
                 <input
                     type="text"
-                    id="productSearch"
+                    id="productFilter"
                     placeholder="Search products..."
                 >
 
@@ -214,21 +242,58 @@ function renderProductsPage() {
 
             </div>
 
-            <div id="productsContainer">
-                ${renderProducts(products)}
+
+            <div
+                id="productsGrid"
+                class="products-grid"
+            >
+
+                ${
+                    products.length > 0
+                        ? products
+                            .map(product =>
+                                renderProductCard(product)
+                            )
+                            .join("")
+                        : `
+                            <div class="empty-state">
+                                <h2>
+                                    No Products Found
+                                </h2>
+
+                                <p>
+                                    There are currently
+                                    no products.
+                                </p>
+                            </div>
+                        `
+                }
+
             </div>
 
         </section>
     `;
 
-    const productSearch =
+    attachProductEvents();
+
+    setupProductFilter();
+}
+
+
+/* =========================
+   PRODUCT FILTER
+========================= */
+
+function setupProductFilter() {
+
+    const input =
         document.getElementById(
-            "productSearch"
+            "productFilter"
         );
 
-    const productsContainer =
+    const grid =
         document.getElementById(
-            "productsContainer"
+            "productsGrid"
         );
 
     const resultCount =
@@ -236,44 +301,221 @@ function renderProductsPage() {
             "resultCount"
         );
 
+    if (!input || !grid) return;
 
-    productSearch.addEventListener(
+
+    input.addEventListener(
         "input",
         () => {
 
-            const keyword =
-                productSearch.value
+            const query =
+                input.value
                     .toLowerCase()
                     .trim();
 
+
             const filtered =
-                products.filter(
-                    product =>
-                        product.title
-                            .toLowerCase()
-                            .includes(keyword) ||
-                        product.category
-                            .toLowerCase()
-                            .includes(keyword)
-                );
+                products.filter(product => {
 
-            productsContainer.innerHTML =
-                renderProducts(filtered);
+                    const title =
+                        String(
+                            product.title || ""
+                        ).toLowerCase();
 
-            resultCount.textContent =
-                `${filtered.length} products`;
+                    const category =
+                        String(
+                            product.category || ""
+                        ).toLowerCase();
+
+                    return (
+                        title.includes(query) ||
+                        category.includes(query)
+                    );
+                });
+
+
+            grid.innerHTML =
+                filtered.length > 0
+                    ? filtered
+                        .map(product =>
+                            renderProductCard(product)
+                        )
+                        .join("")
+                    : `
+                        <div class="empty-state">
+
+                            <h2>
+                                No Matching Products
+                            </h2>
+
+                            <p>
+                                Try another search.
+                            </p>
+
+                        </div>
+                    `;
+
+
+            if (resultCount) {
+                resultCount.textContent =
+                    `${filtered.length} products`;
+            }
+
+
+            attachProductEvents();
         }
     );
 }
 
 
+/* =========================
+   PRODUCT EVENTS
+========================= */
+
+function attachProductEvents() {
+
+    const buttons =
+        document.querySelectorAll(
+            "[data-product-id]"
+        );
+
+
+    buttons.forEach(button => {
+
+        button.addEventListener(
+            "click",
+            () => {
+
+                const id =
+                    button.dataset.productId;
+
+                const action =
+                    button.dataset.action;
+
+
+                if (action === "view") {
+
+                    window.location.hash =
+                        `#/product/${id}`;
+
+                    return;
+                }
+
+
+                if (action === "add") {
+
+                    const product =
+                        products.find(item =>
+                            String(
+                                item._id ||
+                                item.id
+                            ) === String(id)
+                        );
+
+
+                    if (product) {
+                        addToCart(product);
+                    }
+                }
+            }
+        );
+    });
+}
+
+
+/* =========================
+   PRODUCT DETAILS
+========================= */
+
+async function renderProduct(id) {
+
+    app.innerHTML = `
+        <section class="loading-state">
+
+            <div class="loader"></div>
+
+            <p>
+                Loading product...
+            </p>
+
+        </section>
+    `;
+
+
+    try {
+
+        const product =
+            await getProduct(id);
+
+
+        app.innerHTML =
+            renderProductDetails(product);
+
+
+        const addButton =
+            document.getElementById(
+                "addToCartButton"
+            );
+
+
+        if (addButton) {
+
+            addButton.addEventListener(
+                "click",
+                () => {
+
+                    addToCart(product);
+
+                }
+            );
+        }
+
+
+    } catch (error) {
+
+        console.error(
+            "Product loading error:",
+            error
+        );
+
+
+        app.innerHTML = `
+            <section class="error-state">
+
+                <h2>
+                    Product Not Found
+                </h2>
+
+                <p>
+                    We could not load this product.
+                </p>
+
+                <a
+                    href="#/products"
+                    class="primary-button"
+                >
+                    Back to Products
+                </a>
+
+            </section>
+        `;
+    }
+}
+
+
+/* =========================
+   CART PAGE
+========================= */
+
 function renderCartPage() {
+
     app.innerHTML =
         renderCart(cart);
 
+
     document
         .querySelectorAll(
-            ".remove-cart-button"
+            "[data-remove-cart]"
         )
         .forEach(button => {
 
@@ -281,213 +523,443 @@ function renderCartPage() {
                 "click",
                 () => {
 
-                    const index =
-                        Number(
-                            button.dataset.cartIndex
-                        );
+                    removeFromCart(
+                        button.dataset.removeCart
+                    );
 
-                    cart.splice(index, 1);
-
-                    saveCart();
-
-                    renderCartPage();
                 }
             );
         });
 
 
-    const checkoutButton =
-        document.querySelector(
-            ".checkout-button"
-        );
+    document
+        .querySelectorAll(
+            "[data-cart-quantity]"
+        )
+        .forEach(input => {
 
-    if (checkoutButton) {
-        checkoutButton.addEventListener(
-            "click",
-            () => {
-                alert(
-                    "Checkout functionality coming soon."
-                );
-            }
-        );
-    }
+            input.addEventListener(
+                "change",
+                () => {
+
+                    updateQuantity(
+                        input.dataset.cartQuantity,
+                        input.value
+                    );
+
+                }
+            );
+        });
 }
 
 
-function attachProductEvents() {
-    const addButton =
-        document.querySelector(
-            ".add-cart-button"
-        );
+/* =========================
+   ADMIN LOGIN
+========================= */
 
-    if (!addButton) {
-        return;
-    }
+function renderAdminLoginPage() {
 
-    addButton.addEventListener(
-        "click",
-        async () => {
+    app.innerHTML =
+        renderAdminLogin();
 
-            const id =
-                addButton.dataset.productId;
-
-            try {
-
-                const product =
-                    await getProduct(id);
-
-                cart.push(product);
-
-                saveCart();
-
-                addButton.textContent =
-                    "Added to Cart ✓";
-
-                addButton.disabled =
-                    true;
-
-            } catch (error) {
-
-                alert(
-                    "Unable to add product to cart."
-                );
-            }
-        }
-    );
+    setupAdminLogin();
 }
 
 
-async function renderPage() {
+/* =========================
+   ADMIN DASHBOARD
+========================= */
 
-    const route =
-        getRoute();
+function renderAdminDashboard() {
 
-
-    if (
-        route.page === "home"
-    ) {
-        if (!products.length) {
-            await loadProducts();
-            return;
-        }
-
-        renderHomePage();
-        return;
-    }
-
-
-    if (
-        route.page === "products"
-    ) {
-        if (!products.length) {
-            await loadProducts();
-            return;
-        }
-
-        renderProductsPage();
-        return;
-    }
-
-
-    if (
-        route.page === "product"
-    ) {
-        await renderProductPage(
-            route.id
+    const token =
+        sessionStorage.getItem(
+            "shopease_admin_token"
         );
+
+
+    const adminData =
+        sessionStorage.getItem(
+            "shopease_admin"
+        );
+
+
+    if (!token || !adminData) {
+
+        window.location.hash =
+            "#/admin/login";
+
         return;
     }
 
 
-    if (
-        route.page === "cart"
-    ) {
-        renderCartPage();
+    let admin;
+
+    try {
+
+        admin =
+            JSON.parse(adminData);
+
+    } catch {
+
+        sessionStorage.removeItem(
+            "shopease_admin_token"
+        );
+
+        sessionStorage.removeItem(
+            "shopease_admin"
+        );
+
+        window.location.hash =
+            "#/admin/login";
+
         return;
     }
 
 
     app.innerHTML = `
-        <div class="empty-state">
-            <h1>404</h1>
-            <p>Page not found.</p>
+        <section class="admin-dashboard">
 
-            <a
-                href="#/"
-                class="primary-button"
-            >
-                Go Home
-            </a>
-        </div>
+            <div class="admin-header">
+
+                <div>
+
+                    <span class="admin-badge">
+                        ADMIN PANEL
+                    </span>
+
+                    <h1>
+                        ShopEase Dashboard
+                    </h1>
+
+                    <p>
+                        Welcome,
+                        ${admin.name || "Administrator"}
+                    </p>
+
+                </div>
+
+
+                <button
+                    id="adminLogout"
+                    class="logout-btn"
+                >
+                    Logout
+                </button>
+
+            </div>
+
+
+            <div class="admin-card">
+
+                <h2>
+                    Product Management
+                </h2>
+
+                <p>
+                    Your admin authentication is
+                    working successfully.
+                </p>
+
+                <a
+                    href="#/products"
+                    class="admin-back-btn"
+                >
+                    View Store
+                </a>
+
+            </div>
+
+        </section>
     `;
+
+
+    const logout =
+        document.getElementById(
+            "adminLogout"
+        );
+
+
+    if (logout) {
+
+        logout.addEventListener(
+            "click",
+            () => {
+
+                sessionStorage.removeItem(
+                    "shopease_admin_token"
+                );
+
+                sessionStorage.removeItem(
+                    "shopease_admin"
+                );
+
+                window.location.hash =
+                    "#/admin/login";
+            }
+        );
+    }
 }
 
 
-function searchProducts() {
+/* =========================
+   MAIN ROUTER
+========================= */
 
-    const keyword =
-        searchInput.value
-            .toLowerCase()
-            .trim();
+async function renderCurrentPage() {
 
-    if (!keyword) {
-        window.location.hash =
-            "#/products";
+    const route =
+        getRoute();
 
-        return;
+
+    updateCartCount();
+
+
+    switch (route.page) {
+
+        case "home":
+
+            renderHome();
+
+            break;
+
+
+        case "products":
+
+            renderProducts();
+
+            break;
+
+
+        case "product":
+
+            await renderProduct(
+                route.id
+            );
+
+            break;
+
+
+        case "cart":
+
+            renderCartPage();
+
+            break;
+
+
+        case "admin-login":
+
+            renderAdminLoginPage();
+
+            break;
+
+
+        case "admin-dashboard":
+
+            renderAdminDashboard();
+
+            break;
+
+
+        default:
+
+            renderHome();
+
+            break;
+    }
+}
+
+
+/* =========================
+   HEADER SEARCH
+========================= */
+
+function setupHeaderSearch() {
+
+    const searchInput =
+        document.getElementById(
+            "searchInput"
+        );
+
+
+    if (!searchInput) return;
+
+
+    searchInput.addEventListener(
+        "input",
+        () => {
+
+            const query =
+                searchInput.value
+                    .toLowerCase()
+                    .trim();
+
+
+            const grid =
+                document.querySelector(
+                    ".products-grid"
+                );
+
+
+            if (!grid) return;
+
+
+            const filtered =
+                products.filter(product => {
+
+                    const title =
+                        String(
+                            product.title || ""
+                        ).toLowerCase();
+
+                    const category =
+                        String(
+                            product.category || ""
+                        ).toLowerCase();
+
+                    return (
+                        title.includes(query) ||
+                        category.includes(query)
+                    );
+                });
+
+
+            grid.innerHTML =
+                filtered.length > 0
+                    ? filtered
+                        .map(product =>
+                            renderProductCard(product)
+                        )
+                        .join("")
+                    : `
+                        <div class="empty-state">
+
+                            <h2>
+                                No Products Found
+                            </h2>
+
+                            <p>
+                                Try another search.
+                            </p>
+
+                        </div>
+                    `;
+
+
+            attachProductEvents();
+        }
+    );
+}
+
+
+/* =========================
+   INITIALIZE
+========================= */
+
+async function init() {
+
+    /*
+       Render the current page first.
+       This prevents the permanent
+       "Loading ShopEase..." problem.
+    */
+
+    await renderCurrentPage();
+
+
+    /*
+       Load products after the page
+       has already rendered.
+    */
+
+    try {
+
+        const data =
+            await getProducts();
+
+
+        if (Array.isArray(data)) {
+
+            products = data;
+
+        } else {
+
+            products = [];
+
+        }
+
+
+        /*
+           Re-render only normal store pages.
+           Admin pages don't need products
+           to display.
+        */
+
+        const route =
+            getRoute();
+
+
+        if (
+            route.page === "home" ||
+            route.page === "products"
+        ) {
+
+            await renderCurrentPage();
+
+        }
+
+
+    } catch (error) {
+
+        console.error(
+            "Products API Error:",
+            error
+        );
+
+        products = [];
+
+
+        const route =
+            getRoute();
+
+
+        if (
+            route.page === "home" ||
+            route.page === "products"
+        ) {
+
+            await renderCurrentPage();
+
+        }
     }
 
-    window.location.hash =
-        "#/products";
 
-    setTimeout(() => {
+    setupHeaderSearch();
 
-        const productSearch =
-            document.getElementById(
-                "productSearch"
-            );
-
-        if (productSearch) {
-
-            productSearch.value =
-                keyword;
-
-            productSearch.dispatchEvent(
-                new Event("input")
-            );
-
-            productSearch.focus();
-        }
-
-    }, 50);
+    updateCartCount();
 }
 
 
-if (searchButton) {
-    searchButton.addEventListener(
-        "click",
-        searchProducts
-    );
-}
+/* =========================
+   HASH CHANGE
+========================= */
 
+window.addEventListener(
+    "hashchange",
+    async () => {
 
-if (searchInput) {
-    searchInput.addEventListener(
-        "keydown",
-        event => {
+        await renderCurrentPage();
 
-            if (
-                event.key === "Enter"
-            ) {
-                searchProducts();
-            }
-        }
-    );
-}
+        setupHeaderSearch();
 
-
-updateCartCount();
-
-startRouter(
-    renderPage
+        updateCartCount();
+    }
 );
+
+
+/* =========================
+   START APP
+========================= */
+
+init();
+```
