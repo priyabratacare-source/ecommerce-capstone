@@ -12,15 +12,10 @@
 
     <meta
         name="description"
-        content="ShopEase - Modern E-Commerce Product Catalog"
+        content="ShopEase - Modern E-Commerce Store"
     >
 
-    <meta
-        name="theme-color"
-        content="#2563eb"
-    >
-
-    <title>ShopEase - E-Commerce</title>
+    <title>ShopEase | E-Commerce Store</title>
 
     <link
         rel="stylesheet"
@@ -31,9 +26,7 @@
 
 <body>
 
-    <!-- ================= HEADER ================= -->
-
-    <header class="header">
+    <header class="site-header">
 
         <div class="container navbar">
 
@@ -41,10 +34,11 @@
                 href="#/"
                 class="logo"
             >
-                ShopEase
+                Shop<span>Ease</span>
             </a>
 
-            <nav class="nav">
+
+            <nav class="nav-links">
 
                 <a href="#/">
                     Home
@@ -56,47 +50,107 @@
 
                 <a href="#/cart">
                     Cart
-                    <span id="cart-count">0</span>
+                    <span
+                        id="cartCount"
+                        class="cart-count"
+                    >
+                        0
+                    </span>
                 </a>
 
             </nav>
+
+
+            <div class="search-box">
+
+                <input
+                    type="search"
+                    id="searchInput"
+                    placeholder="Search products..."
+                    aria-label="Search products"
+                >
+
+                <button
+                    id="searchButton"
+                    type="button"
+                >
+                    Search
+                </button>
+
+            </div>
 
         </div>
 
     </header>
 
 
-    <!-- ================= MAIN APPLICATION ================= -->
+    <main
+        id="app"
+        class="container main-content"
+    >
 
-    <main id="app">
+        <div class="loading-state">
 
-        <div class="loading">
-            Loading...
+            <div class="loader"></div>
+
+            <p>
+                Loading ShopEase...
+            </p>
+
         </div>
 
     </main>
 
 
-    <!-- ================= FOOTER ================= -->
+    <footer class="site-footer">
 
-    <footer class="footer">
+        <div class="container footer-content">
 
-        <div class="container">
+            <div>
+
+                <a
+                    href="#/"
+                    class="logo"
+                >
+                    Shop<span>Ease</span>
+                </a>
+
+                <p>
+                    Your modern online shopping destination.
+                </p>
+
+            </div>
+
+
+            <div class="footer-links">
+
+                <a href="#/">
+                    Home
+                </a>
+
+                <a href="#/products">
+                    Products
+                </a>
+
+                <a href="#/cart">
+                    Cart
+                </a>
+
+            </div>
+
+        </div>
+
+
+        <div class="footer-bottom">
 
             <p>
                 © 2026 ShopEase. All rights reserved.
-            </p>
-
-            <p>
-                Built with HTML, CSS and JavaScript.
             </p>
 
         </div>
 
     </footer>
 
-
-    <!-- ================= JAVASCRIPT ================= -->
 
     <script
         type="module"
