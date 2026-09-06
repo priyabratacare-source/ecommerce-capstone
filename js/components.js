@@ -1,131 +1,223 @@
+export function renderHome(products) {
+
+    const featuredProducts =
+        products.slice(0, 4);
+
+    return `
+        <section class="hero">
+
+            <h1>
+                Welcome to <span>ShopEase</span>
+            </h1>
+
+            <p>
+                Discover quality products at simple and
+                affordable prices.
+            </p>
+
+            <a
+                href="#/products"
+                class="primary-button"
+            >
+                Explore Products
+            </a>
+
+        </section>
+
+
+        <section>
+
+            <div class="section-title">
+
+                <h2>
+                    Featured Products
+                </h2>
+
+                <p>
+                    Explore some of our popular products.
+                </p>
+
+            </div>
+
+            <div class="products-grid">
+
+                ${featuredProducts
+                    .map(product =>
+                        renderProductCard(product)
+                    )
+                    .join("")
+                }
+
+            </div>
+
+        </section>
+    `;
+}
+
+
+export function renderProducts(products) {
+
+    return `
+        <section>
+
+            <div class="section-title">
+
+                <h2>
+                    All Products
+                </h2>
+
+                <p>
+                    Browse our complete product collection.
+                </p>
+
+            </div>
+
+            ${
+                products.length === 0
+                    ? `
+                        <div class="empty-state">
+                            No products found.
+                        </div>
+                    `
+                    : `
+                        <div class="products-grid">
+
+                            ${products
+                                .map(product =>
+                                    renderProductCard(product)
+                                )
+                                .join("")
+                            }
+
+                        </div>
+                    `
+            }
+
+        </section>
+    `;
+}
+
+
 export function renderProductCard(product) {
-    const productId = product._id || product.id;
 
     return `
         <article class="product-card">
-            <div class="product-image-wrapper">
-                <img
-                    src="${product.thumbnail}"
-                    alt="${product.title}"
-                    class="product-image"
-                    loading="lazy"
-                >
-            </div>
 
-            <div class="product-content">
+            <img
+                src="${product.image}"
+                alt="${product.title}"
+                class="product-image"
+                loading="lazy"
+            >
+
+            <div class="product-info">
+
                 <span class="product-category">
                     ${product.category}
                 </span>
 
-                <h3>${product.title}</h3>
+                <h3 class="product-title">
+                    ${product.title}
+                </h3>
 
                 <p class="product-description">
                     ${product.description}
                 </p>
 
                 <div class="product-bottom">
-                    <strong>
-                        $${Number(product.price).toFixed(2)}
-                    </strong>
+
+                    <span class="product-price">
+                        ₹${product.price.toLocaleString("en-IN")}
+                    </span>
 
                     <a
-                        href="#/product/${productId}"
+                        href="#/product/${product.id}"
                         class="view-button"
                     >
                         View
                     </a>
+
                 </div>
+
             </div>
+
         </article>
     `;
 }
 
 
-export function renderProducts(products) {
-    if (!products || products.length === 0) {
-        return `
-            <div class="empty-state">
-                <h2>No Products Found</h2>
-                <p>
-                    There are currently no products available.
-                </p>
-            </div>
-        `;
-    }
-
-    return `
-        <div class="products-grid">
-            ${products
-                .map(renderProductCard)
-                .join("")}
-        </div>
-    `;
-}
-
-
 export function renderProductDetails(product) {
+
     if (!product) {
+
         return `
-            <div class="empty-state">
-                <h2>Product Not Found</h2>
-                <a href="#/products" class="primary-button">
-                    Back to Products
-                </a>
+            <div class="error-message">
+                Product not found.
             </div>
         `;
     }
 
     return `
         <section class="product-details">
-            <div class="details-image">
+
+            <div class="product-details-layout">
+
                 <img
-                    src="${product.thumbnail}"
+                    src="${product.image}"
                     alt="${product.title}"
+                    class="product-details-image"
                 >
-            </div>
 
-            <div class="details-content">
-                <span class="product-category">
-                    ${product.category}
-                </span>
+                <div>
 
-                <h1>${product.title}</h1>
+                    <span class="product-category">
+                        ${product.category}
+                    </span>
 
-                <p class="details-description">
-                    ${product.description}
-                </p>
+                    <h1>
+                        ${product.title}
+                    </h1>
 
-                <div class="details-price">
-                    $${Number(product.price).toFixed(2)}
+                    <p class="product-details-description">
+                        ${product.description}
+                    </p>
+
+                    <div class="product-details-price">
+                        ₹${product.price.toLocaleString("en-IN")}
+                    </div>
+
+                    <button
+                        class="add-cart-button"
+                        data-product-id="${product.id}"
+                    >
+                        Add to Cart
+                    </button>
+
                 </div>
 
-                <button
-                    class="primary-button add-cart-button"
-                    data-product-id="${product._id || product.id}"
-                >
-                    Add to Cart
-                </button>
-
-                <a
-                    href="#/products"
-                    class="back-link"
-                >
-                    ← Back to Products
-                </a>
             </div>
+
         </section>
     `;
 }
 
 
-export function renderCart(cart) {
-    if (!cart || cart.length === 0) {
+export function renderCart(cart, products) {
+
+    if (cart.length === 0) {
+
         return `
             <div class="empty-state">
-                <h2>Your Cart is Empty</h2>
+
+                <h2>
+                    Your cart is empty
+                </h2>
+
                 <p>
                     Add some products to your cart.
                 </p>
+
+                <br>
 
                 <a
                     href="#/products"
@@ -133,72 +225,79 @@ export function renderCart(cart) {
                 >
                     Browse Products
                 </a>
+
             </div>
         `;
     }
 
-    const total = cart.reduce(
-        (sum, product) =>
-            sum + Number(product.price),
-        0
-    );
+
+    const cartProducts =
+        cart
+            .map(id => products.find(
+                product => product.id === id
+            ))
+            .filter(Boolean);
+
+
+    const total =
+        cartProducts.reduce(
+            (sum, product) =>
+                sum + product.price,
+            0
+        );
+
 
     return `
-        <section class="cart-section">
+        <section class="cart-container">
 
-            <div class="cart-items">
-                ${cart.map((product, index) => `
+            <div class="section-title">
+                <h2>Your Cart</h2>
+                <p>
+                    Products you have selected.
+                </p>
+            </div>
+
+            ${cartProducts
+                .map(product => `
+
                     <div class="cart-item">
 
-                        <img
-                            src="${product.thumbnail}"
-                            alt="${product.title}"
-                            loading="lazy"
-                        >
-
                         <div class="cart-item-info">
-                            <h3>${product.title}</h3>
 
-                            <span>
-                                ${product.category}
-                            </span>
+                            <img
+                                src="${product.image}"
+                                alt="${product.title}"
+                                class="cart-item-image"
+                            >
 
-                            <strong>
-                                $${Number(product.price).toFixed(2)}
-                            </strong>
+                            <div>
+                                <h3>
+                                    ${product.title}
+                                </h3>
+
+                                <p>
+                                    ₹${product.price.toLocaleString("en-IN")}
+                                </p>
+                            </div>
+
                         </div>
 
                         <button
-                            class="remove-cart-button"
-                            data-cart-index="${index}"
+                            class="remove-button"
+                            data-remove-id="${product.id}"
                         >
                             Remove
                         </button>
 
                     </div>
-                `).join("")}
-            </div>
 
-            <div class="cart-summary">
-                <h2>Order Summary</h2>
+                `)
+                .join("")
+            }
 
-                <div class="summary-row">
-                    <span>Items</span>
-                    <strong>${cart.length}</strong>
-                </div>
-
-                <div class="summary-row total-row">
-                    <span>Total</span>
-                    <strong>
-                        $${total.toFixed(2)}
-                    </strong>
-                </div>
-
-                <button
-                    class="primary-button checkout-button"
-                >
-                    Checkout
-                </button>
+            <div class="cart-total">
+                Total:
+                ₹${total.toLocaleString("en-IN")}
             </div>
 
         </section>
