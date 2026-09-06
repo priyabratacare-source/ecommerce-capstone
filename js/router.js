@@ -1,54 +1,60 @@
+```javascript
 export function getRoute() {
     const hash =
         window.location.hash || "#/";
 
-    const route =
+    const path =
         hash.replace(/^#/, "");
 
-    const parts =
-        route.split("/").filter(Boolean);
-
-    if (parts.length === 0) {
+    if (
+        path === "" ||
+        path === "/"
+    ) {
         return {
             page: "home"
         };
     }
 
-    if (parts[0] === "products") {
+    if (path === "/products") {
         return {
             page: "products"
         };
     }
 
-    if (parts[0] === "product" && parts[1]) {
-        return {
-            page: "product",
-            id: parts[1]
-        };
-    }
-
-    if (parts[0] === "cart") {
+    if (path === "/cart") {
         return {
             page: "cart"
         };
     }
 
+    if (path === "/admin/login") {
+        return {
+            page: "admin-login"
+        };
+    }
+
+    if (path === "/admin/dashboard") {
+        return {
+            page: "admin-dashboard"
+        };
+    }
+
+    if (path.startsWith("/product/")) {
+        const id =
+            path.split("/")[2];
+
+        return {
+            page: "product",
+            id
+        };
+    }
+
     return {
-        page: "404"
+        page: "home"
     };
 }
-
 
 export function navigate(path) {
     window.location.hash = path;
 }
-
-
-export function startRouter(callback) {
-    window.addEventListener(
-        "hashchange",
-        callback
-    );
-
-    callback();
-}
+```
