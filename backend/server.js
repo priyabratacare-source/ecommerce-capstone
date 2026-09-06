@@ -1,54 +1,31 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
+import bcrypt from "bcryptjs";
 
 import { connectDB } from "./config/db.js";
+import Admin from "./models/Admin.js";
 
-import productRoutes
-    from "./routes/productRoutes.js";
+import productRoutes from "./routes/productRoutes.js";
+import authRoutes from "./routes/authRoutes.js";
 
-
-/* ================================
-   ENVIRONMENT
-================================ */
 
 dotenv.config();
 
 
-/* ================================
-   EXPRESS APP
-================================ */
-
 const app = express();
 
-
-/* ================================
-   DATABASE
-================================ */
-
-connectDB();
-
-
-/* ================================
-   MIDDLEWARE
-================================ */
 
 app.use(
     cors({
         origin:
-            process.env.FRONTEND_URL ||
-            "*"
+            process.env.FRONTEND_URL
     })
 );
 
-app.use(
-    express.json()
-);
 
+app.use(express.json());
 
-/* ================================
-   HEALTH CHECK
-================================ */
 
 app.get("/", (req, res) => {
 
@@ -61,19 +38,17 @@ app.get("/", (req, res) => {
 });
 
 
-/* ================================
-   PRODUCT API
-================================ */
-
 app.use(
     "/api/products",
     productRoutes
 );
 
 
-/* ================================
-   404
-================================ */
+app.use(
+    "/api/auth",
+    authRoutes
+);
+
 
 app.use((req, res) => {
 
@@ -85,21 +60,81 @@ app.use((req, res) => {
 });
 
 
-/* ================================
-   SERVER
-================================ */
-
 const PORT =
     process.env.PORT || 5000;
 
 
-app.listen(
-    PORT,
-    () => {
+async function startServer() {
 
-        console.log(
-            `ShopEase API running on port ${PORT}`
+    try {
+
+        await connectDB();
+
+
+        const existingAdmin =
+            await Admin.findOne({
+                email:
+                    process.env.ADMIN_EMAIL
+            });
+
+
+        if (!existingAdmin) {
+
+            const hashedPassword =
+                await bcrypt.hash(
+                    process.env.ADMIN_PASSWORD,
+                    12
+                );
+
+
+            await Admin.create({
+                name:
+                    process.env.ADMIN_NAME ||
+                    "ShopEase Administrator",
+
+                email:
+                    process.env.ADMIN_EMAIL,
+
+                password:
+                    hashedPassword,
+
+                role: "admin"
+            });
+
+
+            console.log(
+                "Initial admin account created"
+            );
+
+        } else {
+
+            console.log(
+                "Admin account already exists"
+            );
+        }
+
+
+        app.listen(
+            PORT,
+            () => {
+
+                console.log(
+                    `ShopEase API running on port ${PORT}`
+                );
+
+            }
         );
 
+    } catch (error) {
+
+        console.error(
+            "Server startup failed:",
+            error
+        );
+
+        process.exit(1);
     }
-);
+}
+
+
+startServer();
